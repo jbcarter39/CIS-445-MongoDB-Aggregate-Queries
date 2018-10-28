@@ -1,0 +1,59 @@
+Q1: Select the top 10 most occurring birthdays in our company ordered from greatest to least. 
+Show the birthday and the number of employees that share that birthday.
+
+db.employees.aggregate([
+  { $group:
+      {"_id":
+        "$birth_date", 
+        "count":{$sum:1} 
+        }
+  },
+  
+  { $sort: {"count":-1} },
+  
+  { $limit: 10  }
+]);
+
+Q2: Select the first 10 employees (ordered by employee number) 
+and show employee number, first name, last name, and current salary from our company.
+
+db.employees.aggregate([
+  {$match: {}}, 
+  
+  { $project: {
+    _id: 0,
+    emp_no: 1,
+    first_name: 1,
+    last_name: 1,
+    salaries: 1
+    }
+  },
+  
+  { $limit: 10}
+]).pretty();
+
+Q3: What is the average salary for all employees (also show the number of active employees used for the average)?
+
+db.employees.aggregate([ 
+    { "$project": {
+        _id: 0,
+        "salary": { 
+            "$map": { 
+                "input": "$salaries", 
+                "as": "s",
+                "in": "$$s.salary" 
+            } 
+        }
+        
+    }}, 
+    { "$unwind": "$salary" }, 
+    { "$group": { 
+        "_id":  "$_id", 
+        "avgSalary": { "$avg": "$salary" },
+        count: {$sum: 1}
+    }} 
+]);
+
+Q4: Select the first 10 employees and show employee number, first name, and last name whose current salary 
+is greater than the average salary of all employees. Order it by salaries and then employee number.  
+DO NOT copy paste 72012.2359... thats too easy.
