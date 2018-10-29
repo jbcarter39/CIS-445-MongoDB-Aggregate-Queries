@@ -14,6 +14,7 @@ db.employees.aggregate([
   { $limit: 10  }
 ]);
 
+
 Q2: Select the first 10 employees (ordered by employee number) 
 and show employee number, first name, last name, and current salary from our company.
 
@@ -31,6 +32,7 @@ db.employees.aggregate([
   
   { $limit: 10}
 ]).pretty();
+
 
 Q3: What is the average salary for all employees (also show the number of active employees used for the average)?
 
@@ -54,6 +56,85 @@ db.employees.aggregate([
     }} 
 ]);
 
+
 Q4: Select the first 10 employees and show employee number, first name, and last name whose current salary 
 is greater than the average salary of all employees. Order it by salaries and then employee number.  
 DO NOT copy paste 72012.2359... thats too easy.
+
+db.employees.aggregate([ 
+    { "$project": {
+        _id: 0,
+        "salary": { 
+            "$map": { 
+                "input": "$salaries", 
+                "as": "s",
+                "in": "$$s.salary" 
+            } 
+        }
+        
+    }}, 
+    { "$unwind": "$salaries" }, 
+    { "$group": { 
+        "_id":  "$_id", 
+        "avgSalary": { "$avg": "$salary" },
+        count: {$sum: 1}
+    }} 
+]);
+
+db.employees.aggregate([
+    { $limit: 10},
+    avgSalary = db.employees.aggregate([cursor.next("avgSalary")]),
+    {$project: {
+        _id: 0,
+        emp_no: 1,
+        first_name: 1,
+        last_name: 1,
+        departments: 1,
+        avgSalary: 1
+        }}
+]).pretty();
+
+
+Q5: Now select the first 20 employees and show employee no, first name, last name, 
+the current department they work for and their current salary.
+
+db.employees.aggregate([
+    { $limit: 20},
+    { $unwind: "$salaries"},
+    { $match: { "salaries.to_date" : ISODate("9999-01-01T05:00:00Z") } },
+    {$project: {
+        _id: 0,
+        emp_no: 1,
+        first_name: 1,
+        last_name: 1,
+        departments: 1,
+        salaries: 1
+        }}
+]).pretty();
+
+
+Q6: Select the department and the average current salary for all the employees in it.  
+Order it by the avg salary in increasing order.
+
+db.employees.aggregate([
+  { $project: {
+        "salary": { 
+            "$map": { 
+                "input": "$salaries", 
+                "as": "s",
+                "in": "$$s.salary" 
+            } 
+        }
+      }
+    }, 
+  {$unwind: "$departments"},
+  {$unwind: "$salaries" },
+  { $group : {
+      _id: "$departments.dept_name",
+      avgSalary: {$avg: "$salary"},
+      }
+    }
+  { $sort: 1}
+
+]).pretty();
+
