@@ -19,42 +19,32 @@ Q2: Select the first 10 employees (ordered by employee number)
 and show employee number, first name, last name, and current salary from our company.
 
 db.employees.aggregate([
-  {$match: {}}, 
-  
-  { $project: {
-    _id: 0,
-    emp_no: 1,
-    first_name: 1,
-    last_name: 1,
-    salaries: 1
+    {
+      $project: {
+                  _id: 0,
+                  emp_no : 1,
+                  first_name: 1,
+                  last_name: 1,
+                  salaries: {$slice:["$salaries", -1]},
+                }
+    },
+    {
+      $limit: 10
     }
-  },
-  
-  { $limit: 10}
-]).pretty();
+  ]).pretty();
 
 
 Q3: What is the average salary for all employees (also show the number of active employees used for the average)?
 
-db.employees.aggregate([ 
-    { "$project": {
-        _id: 0,
-        "salary": { 
-            "$map": { 
-                "input": "$salaries", 
-                "as": "s",
-                "in": "$$s.salary" 
-            } 
-        }
-        
-    }}, 
-    { "$unwind": "$salary" }, 
-    { "$group": { 
-        "_id":  "$_id", 
-        "avgSalary": { "$avg": "$salary" },
-        count: {$sum: 1}
-    }} 
-]);
+db.employees.aggregate([
+    {$unwind: "$salaries"},
+    {$group:{
+      _id: "null",
+      "avgSalary": {$avg:"$salaries.salary"},
+      "count":{$sum:1}
+      }
+    }
+  ]);
 
 
 Q4: Select the first 10 employees and show employee number, first name, and last name whose current salary 
@@ -80,7 +70,6 @@ db.employees.aggregate([
         count: {$sum: 1}
     }} 
 ]);
-
 db.employees.aggregate([
     { $limit: 10},
     avgSalary = db.employees.aggregate([cursor.next("avgSalary")]),
@@ -98,43 +87,31 @@ db.employees.aggregate([
 Q5: Now select the first 20 employees and show employee no, first name, last name, 
 the current department they work for and their current salary.
 
-db.employees.aggregate([
-    { $limit: 20},
-    { $unwind: "$salaries"},
-    { $match: { "salaries.to_date" : ISODate("9999-01-01T05:00:00Z") } },
-    {$project: {
-        _id: 0,
-        emp_no: 1,
-        first_name: 1,
-        last_name: 1,
-        departments: 1,
-        salaries: 1
-        }}
-]).pretty();
-
+ db.employees.aggregate([
+    { $project: {
+          _id: 0,
+          emp_no : 1,
+          first_name: 1,
+          last_name: 1,
+          departments: {$slice:["$departments", -1]},
+          salaries: {$slice:["$salaries", -1]}
+                }
+    },
+    { $limit: 20 }
+  ]).pretty();
 
 Q6: Select the department and the average current salary for all the employees in it.  
 Order it by the avg salary in increasing order.
 
 db.employees.aggregate([
-  { $project: {
-        "salary": { 
-            "$map": { 
-                "input": "$salaries", 
-                "as": "s",
-                "in": "$$s.salary" 
-            } 
-        }
-      }
-    }, 
-  {$unwind: "$departments"},
-  {$unwind: "$salaries" },
-  { $group : {
+    { $unwind: "$salaries" },
+    { $unwind: "$departments" },
+    { $group:{
       _id: "$departments.dept_name",
-      avgSalary: {$avg: "$salary"},
-      }
+      avgSalary: { $avg:"$salaries.salary" }
     }
-  { $sort: 1}
-
-]).pretty();
+  },
+  { $sort:{ avgSalary: 1 } }
+  
+ ]).pretty();
 
